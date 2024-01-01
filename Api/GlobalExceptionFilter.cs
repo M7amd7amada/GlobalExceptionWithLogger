@@ -1,14 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System;
+using System.IO;
+using System.Text;
 
 public class GlobalExceptionFilter : IExceptionFilter
 {
     private readonly ILogger<GlobalExceptionFilter> logger;
+    private readonly IConfiguration configuration;
 
-    public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)
+    public GlobalExceptionFilter(
+        ILogger<GlobalExceptionFilter> logger,
+        IConfiguration configuration)
     {
         this.logger = logger;
+        this.configuration = configuration;
     }
 
     public void OnException(ExceptionContext context)
@@ -28,6 +37,19 @@ public class GlobalExceptionFilter : IExceptionFilter
 
         logger.LogInformation($"Error Details: {logDetails}");
 
+        var logDirectory = configuration["LogsDirName"];
+
+        if (!Directory.Exists(logDirectory))
+        {
+            Directory.CreateDirectory(logDirectory!);
+        }
+
+        var fileName = $"log-{DateTime.Today:yyyy-MM-dd}.txt";
+        var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), logDirectory!, fileName);
+
+        EnsureLogFileExists(logFilePath);
+        LogToFile(logFilePath, logDetails);
+
         context.Result = new ObjectResult(new
         {
             Message = "Internal Server Error",
@@ -38,5 +60,21 @@ public class GlobalExceptionFilter : IExceptionFilter
         };
 
         context.ExceptionHandled = true;
+    }
+
+    private static void EnsureLogFileExists(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            using var fileStream = File.Create(filePath);
+        }
+    }
+
+    private static void LogToFile(string filePath, object logDetails)
+    {
+        var logMessage = JsonConvert.SerializeObject(logDetails, Formatting.Indented);
+
+        using var streamWriter = new StreamWriter(filePath, true, Encoding.UTF8);
+        streamWriter.WriteLine(logMessage);
     }
 }
