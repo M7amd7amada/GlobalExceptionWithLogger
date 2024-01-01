@@ -1,30 +1,41 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.IO;
 using System.Text;
 
 public class GlobalExceptionFilter : IExceptionFilter
 {
-    private readonly ILogger<GlobalExceptionFilter> logger;
-    private readonly IConfiguration configuration;
+    private readonly ILogger<GlobalExceptionFilter> _logger;
+    private readonly IConfiguration _configuration;
 
     public GlobalExceptionFilter(
         ILogger<GlobalExceptionFilter> logger,
         IConfiguration configuration)
     {
-        this.logger = logger;
-        this.configuration = configuration;
+        _logger = logger;
+        _configuration = configuration;
     }
 
     public void OnException(ExceptionContext context)
     {
-        logger.LogError(context.Exception, "An unhandled exception has occurred.");
+        LogExceptionDetails(context.Exception);
 
-        var logDetails = new
+        var logDetails = CreateLogDetails(context);
+
+        LogToDisk(logDetails);
+
+        context.Result = CreateErrorResponse(context);
+        context.ExceptionHandled = true;
+    }
+
+    private void LogExceptionDetails(Exception exception)
+    {
+        _logger.LogError(exception, "An unhandled exception has occurred.");
+    }
+
+    private object CreateLogDetails(ExceptionContext context)
+    {
+        return new
         {
             ExMessage = context.Exception.Message,
             InnerExMessage = context.Exception.InnerException?.Message,
@@ -34,23 +45,33 @@ public class GlobalExceptionFilter : IExceptionFilter
             Response = context.HttpContext.Response.StatusCode,
             Created = DateTime.Now
         };
+    }
 
-        logger.LogInformation($"Error Details: {logDetails}");
-
-        var logDirectory = configuration["LogsDirName"];
-
-        if (!Directory.Exists(logDirectory))
-        {
-            Directory.CreateDirectory(logDirectory!);
-        }
-
+    private void LogToDisk(dynamic logDetails)
+    {
+        var logDirectory = _configuration["LogsDirName"];
         var fileName = $"log-{DateTime.Today:yyyy-MM-dd}.txt";
         var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), logDirectory!, fileName);
 
         EnsureLogFileExists(logFilePath);
-        LogToFile(logFilePath, logDetails);
 
-        context.Result = new ObjectResult(new
+        var logMessage = JsonConvert.SerializeObject(logDetails, Formatting.Indented);
+
+        using var streamWriter = new StreamWriter(logFilePath, true, Encoding.UTF8);
+        streamWriter.WriteLine(logMessage);
+    }
+
+    private void EnsureLogFileExists(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            using (File.Create(filePath)) { }
+        }
+    }
+
+    private ObjectResult CreateErrorResponse(ExceptionContext context)
+    {
+        return new ObjectResult(new
         {
             Message = "Internal Server Error",
             Details = context.Exception.Message
@@ -58,23 +79,5 @@ public class GlobalExceptionFilter : IExceptionFilter
         {
             StatusCode = 500
         };
-
-        context.ExceptionHandled = true;
-    }
-
-    private static void EnsureLogFileExists(string filePath)
-    {
-        if (!File.Exists(filePath))
-        {
-            using var fileStream = File.Create(filePath);
-        }
-    }
-
-    private static void LogToFile(string filePath, object logDetails)
-    {
-        var logMessage = JsonConvert.SerializeObject(logDetails, Formatting.Indented);
-
-        using var streamWriter = new StreamWriter(filePath, true, Encoding.UTF8);
-        streamWriter.WriteLine(logMessage);
     }
 }
