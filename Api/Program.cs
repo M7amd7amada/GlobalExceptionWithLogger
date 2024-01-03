@@ -1,4 +1,6 @@
-using Api;
+using Api.Filters;
+using Api.Services;
+using Redis.OM;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,8 +11,11 @@ builder.Services.AddControllers(options =>
     options.Filters.Add(typeof(GlobalEndpointFilter));
 });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer
-    .Connect(builder.Configuration["ConnectionStrings:RedisConnectionString"]!));
+builder.Services.AddHostedService<IndexCreationService>();
+builder.Services.AddSingleton(new RedisConnectionProvider(builder.Configuration["ConnectionStrings:RedisConnectionString"]!));
+
+
+
 
 var app = builder.Build();
 

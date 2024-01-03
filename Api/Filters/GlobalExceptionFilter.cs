@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Newtonsoft.Json;
 using System.Text;
 
-namespace Api;
+namespace Api.Filters;
 
 public class GlobalExceptionFilter : IExceptionFilter
 {
@@ -41,6 +41,7 @@ public class GlobalExceptionFilter : IExceptionFilter
         {
             ExMessage = context.Exception.Message,
             InnerExMessage = context.Exception.InnerException?.Message,
+            ExceptionType = context.Exception.GetType().FullName,
             ActionName = context.ActionDescriptor.RouteValues["action"],
             ControllerName = context.ActionDescriptor.RouteValues["controller"],
             Parameters = JsonConvert.SerializeObject(context.HttpContext.Request.Query),
