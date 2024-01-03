@@ -42,6 +42,8 @@ namespace Api.Filters
                 Path = context.HttpContext.Request.Path,
                 QueryParameters = JsonConvert.SerializeObject(context.HttpContext.Request.Query),
                 StatusCode = context.HttpContext.Response.StatusCode,
+                ActionName = context.ActionDescriptor.RouteValues["action"]!,
+                ControllerName = context.ActionDescriptor.RouteValues["controller"]!,
                 ExceptionType = (exception != null ? exception?.GetType().FullName : string.Empty)!,
                 Created = DateTime.Now
             };

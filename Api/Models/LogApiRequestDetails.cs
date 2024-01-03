@@ -11,8 +11,14 @@ public class LogApiRequestDetails
     [Indexed]
     public string Path { get; set; } = default!;
 
-    [Searchable]
+    [Indexed]
     public string QueryParameters { get; set; } = default!;
+
+    [Indexed]
+    public string ActionName { get; set; } = default!;
+
+    [Indexed]
+    public string ControllerName { get; set; } = default!;
 
     [Indexed]
     public int? StatusCode { get; set; } = default!;
