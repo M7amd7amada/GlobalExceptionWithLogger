@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 public class TestController : ControllerBase
 {
     [HttpGet("throw-error")]
-    public IActionResult ThrowError()
+    public IActionResult ThrowError(int id)
     {
         throw new InvalidOperationException("This is a test exception.");
     }
