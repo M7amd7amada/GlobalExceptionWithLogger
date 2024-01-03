@@ -28,7 +28,4 @@ public class LogApiRequestDetails
 
     [Indexed]
     public DateTime Created { get; set; } = default!;
-
-    public static string GetKey(LogApiRequestDetails log) =>
-        $"ApiRequestLog:{log.HttpMethod}-{log.Path}-Request";
 }
