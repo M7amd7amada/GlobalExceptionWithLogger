@@ -1,0 +1,7 @@
+<div *ngIf="statisticsData">
+    <div *ngFor="let controller of Object.keys(statisticsData)">
+        <h2>{{ controller }}</h2>
+        <p>Call Count: {{ statisticsData[controller].callCount }}</p>
+        <p>Status Codes 200 Count: {{ statisticsData[controller].statusCodesCount['200'] }}</p>
+    </div>
+</div>

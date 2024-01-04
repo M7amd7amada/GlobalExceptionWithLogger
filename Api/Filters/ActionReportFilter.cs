@@ -1,17 +1,23 @@
 using Api.Models;
 using Microsoft.AspNetCore.Mvc.Filters;
-using System;
-using System.Collections.Generic;
+using Redis.OM;
+using Redis.OM.Searching;
 
 namespace Api.Filters;
 
 public class ActionReportFilter : IActionFilter
 {
     private readonly Dictionary<string, ActionReportInfo> _statistics;
+    private readonly RedisConnectionProvider _provider;
+    private readonly RedisCollection<ActionReportInfoWrapper> _actionInfo;
 
-    public ActionReportFilter(Dictionary<string, ActionReportInfo> statistics)
+    public ActionReportFilter(
+        Dictionary<string, ActionReportInfo> statistics,
+        RedisConnectionProvider provider)
     {
         _statistics = statistics;
+        _provider = provider;
+        _actionInfo = (RedisCollection<ActionReportInfoWrapper>)_provider.RedisCollection<ActionReportInfoWrapper>();
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -28,6 +34,7 @@ public class ActionReportFilter : IActionFilter
         var action = context.RouteData.Values["action"]?.ToString();
 
         IncrementStatusCodeCount(controller!, action!, context.HttpContext.Response.StatusCode);
+        LogToRedis();
     }
 
     private void IncrementCallCount(string controller, string action)
@@ -56,8 +63,15 @@ public class ActionReportFilter : IActionFilter
 
         _statistics[key].StatusCodesCount![statusCode]++;
     }
-    public Dictionary<string, ActionReportInfo> GetStatistics()
+
+    private async void LogToRedis()
     {
-        return _statistics;
+        var wrapper = new ActionReportInfoWrapper
+        {
+            Statistics = _statistics
+        };
+
+        await _actionInfo.InsertAsync(wrapper);
     }
+
 }

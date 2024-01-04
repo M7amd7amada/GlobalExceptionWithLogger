@@ -8,16 +8,9 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class ActionReportController : ControllerBase
 {
-    private readonly ActionReportFilter _requestStatisticsActionFilter;
-
-    public ActionReportController(ActionReportFilter requestStatisticsActionFilter)
-    {
-        _requestStatisticsActionFilter = requestStatisticsActionFilter;
-    }
-
     [HttpGet]
-    public ActionResult<Dictionary<string, ActionReportInfo>> GetStatistics()
+    public IActionResult GetStatistics()
     {
-        return Ok(_requestStatisticsActionFilter.GetStatistics());
+        return Ok();
     }
 }
