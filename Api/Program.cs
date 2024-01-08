@@ -2,7 +2,6 @@ using Api.Filters;
 using Api.Models;
 using Api.Services;
 using Redis.OM;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 

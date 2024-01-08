@@ -9,7 +9,8 @@ public class ActionReportFilter : IActionFilter
 {
     private readonly Dictionary<string, ActionReportInfo> _statistics;
     private readonly RedisConnectionProvider _provider;
-    private readonly RedisCollection<ActionReportInfoWrapper> _actionInfo;
+    private readonly RedisCollection<ActionReportInfoWrapper>? _actionInfo;
+    private static bool _isInitialized = false;
 
     public ActionReportFilter(
         Dictionary<string, ActionReportInfo> statistics,
@@ -17,7 +18,22 @@ public class ActionReportFilter : IActionFilter
     {
         _statistics = statistics;
         _provider = provider;
-        _actionInfo = (RedisCollection<ActionReportInfoWrapper>)_provider.RedisCollection<ActionReportInfoWrapper>();
+        _actionInfo = _provider.RedisCollection<ActionReportInfoWrapper>() as RedisCollection<ActionReportInfoWrapper>;
+    }
+
+    public void Initialize()
+    {
+        if (!_isInitialized)
+        {
+            var wrapper = new ActionReportInfoWrapper
+            {
+                Statistics = _statistics
+            };
+
+            _actionInfo?.Insert(wrapper);
+
+            _isInitialized = true;
+        }
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -34,7 +50,7 @@ public class ActionReportFilter : IActionFilter
         var action = context.RouteData.Values["action"]?.ToString();
 
         IncrementStatusCodeCount(controller!, action!, context.HttpContext.Response.StatusCode);
-        LogToRedis();
+        UpdateStatistics();
     }
 
     private void IncrementCallCount(string controller, string action)
@@ -64,14 +80,8 @@ public class ActionReportFilter : IActionFilter
         _statistics[key].StatusCodesCount![statusCode]++;
     }
 
-    private async void LogToRedis()
+    private async void UpdateStatistics()
     {
-        var wrapper = new ActionReportInfoWrapper
-        {
-            Statistics = _statistics
-        };
-
-        await _actionInfo.InsertAsync(wrapper);
+        await _actionInfo!.SaveAsync();
     }
-
 }
