@@ -11,6 +11,6 @@ export class StatisticsService {
   constructor(private http: HttpClient) {}
 
   getStatistics(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/api/statistics`);
+    return this.http.get<any>(`${this.apiUrl}/api/helloworld`);
   }
 }

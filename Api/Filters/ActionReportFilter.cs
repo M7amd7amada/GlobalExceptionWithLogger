@@ -10,6 +10,7 @@ public class ActionReportFilter : IActionFilter
     private readonly Dictionary<string, ActionReportInfo> _statistics;
     private readonly RedisConnectionProvider _provider;
     private readonly RedisCollection<ActionReportInfoWrapper> _actionInfo;
+    private string _key = string.Empty;
 
     public ActionReportFilter(
         Dictionary<string, ActionReportInfo> statistics,
@@ -17,15 +18,15 @@ public class ActionReportFilter : IActionFilter
     {
         _statistics = statistics;
         _provider = provider;
-        _actionInfo = (RedisCollection<ActionReportInfoWrapper>)_provider.RedisCollection<ActionReportInfoWrapper>();
+        _actionInfo = (RedisCollection<ActionReportInfoWrapper>)
+                _provider.RedisCollection<ActionReportInfoWrapper>();
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
     {
         var controller = context.RouteData.Values["controller"]?.ToString();
-        var action = context.RouteData.Values["action"]?.ToString();
 
-        IncrementCallCount(controller!, action!);
+        IncrementCallCount(controller!);
     }
 
     public void OnActionExecuted(ActionExecutedContext context)
@@ -33,27 +34,35 @@ public class ActionReportFilter : IActionFilter
         var controller = context.RouteData.Values["controller"]?.ToString();
         var action = context.RouteData.Values["action"]?.ToString();
 
-        IncrementStatusCodeCount(controller!, action!, context.HttpContext.Response.StatusCode);
+        IncrementStatusCodeCount(controller!, context.HttpContext.Response.StatusCode);
         LogToRedis();
     }
 
-    private void IncrementCallCount(string controller, string action)
+    private void IncrementCallCount(string controller)
     {
-        var key = $"{controller}Controller.{action}";
+        var key = $"{controller}Controller";
         if (!_statistics.ContainsKey(key))
         {
-            _statistics[key] = new ActionReportInfo { CallCount = 0, StatusCodesCount = new Dictionary<int, int>() };
+            _statistics[key] = new ActionReportInfo
+            {
+                CallCount = 0,
+                StatusCodesCount = new Dictionary<int, int>()
+            };
         }
 
         _statistics[key].CallCount++;
     }
 
-    private void IncrementStatusCodeCount(string controller, string action, int statusCode)
+    private void IncrementStatusCodeCount(string controller, int statusCode)
     {
-        var key = $"{controller}Controller.{action}";
+        var key = $"{controller}Controller";
         if (!_statistics.ContainsKey(key))
         {
-            _statistics[key] = new ActionReportInfo { CallCount = 0, StatusCodesCount = new Dictionary<int, int>() };
+            _statistics[key] = new ActionReportInfo
+            {
+                CallCount = 0,
+                StatusCodesCount = new Dictionary<int, int>()
+            };
         }
 
         if (!_statistics[key].StatusCodesCount!.ContainsKey(statusCode))
@@ -72,5 +81,9 @@ public class ActionReportFilter : IActionFilter
         };
 
         await _actionInfo.InsertAsync(wrapper);
+    }
+    public Dictionary<string, ActionReportInfo> GetStatistics()
+    {
+        return _statistics;
     }
 }
