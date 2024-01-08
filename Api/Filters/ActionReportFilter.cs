@@ -29,13 +29,12 @@ public class ActionReportFilter : IActionFilter
         IncrementCallCount(controller!);
     }
 
-    public void OnActionExecuted(ActionExecutedContext context)
+    public async void OnActionExecuted(ActionExecutedContext context)
     {
         var controller = context.RouteData.Values["controller"]?.ToString();
-        var action = context.RouteData.Values["action"]?.ToString();
 
         IncrementStatusCodeCount(controller!, context.HttpContext.Response.StatusCode);
-        LogToRedis();
+        await LogToRedis();
     }
 
     private void IncrementCallCount(string controller)
@@ -73,7 +72,7 @@ public class ActionReportFilter : IActionFilter
         _statistics[key].StatusCodesCount![statusCode]++;
     }
 
-    private async void LogToRedis()
+    private async Task LogToRedis()
     {
         var wrapper = new ActionReportInfoWrapper
         {
