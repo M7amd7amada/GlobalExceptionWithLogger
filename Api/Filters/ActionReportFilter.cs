@@ -9,8 +9,7 @@ public class ActionReportFilter : IActionFilter
 {
     private readonly Dictionary<string, ActionReportInfo> _statistics;
     private readonly RedisConnectionProvider _provider;
-    private readonly RedisCollection<ActionReportInfoWrapper>? _actionInfo;
-    private static bool _isInitialized = false;
+    private readonly RedisCollection<ActionReportInfoWrapper> _actionInfo;
 
     public ActionReportFilter(
         Dictionary<string, ActionReportInfo> statistics,
@@ -18,22 +17,14 @@ public class ActionReportFilter : IActionFilter
     {
         _statistics = statistics;
         _provider = provider;
-        _actionInfo = _provider.RedisCollection<ActionReportInfoWrapper>() as RedisCollection<ActionReportInfoWrapper>;
-    }
+        _actionInfo = (RedisCollection<ActionReportInfoWrapper>)_provider.RedisCollection<ActionReportInfoWrapper>();
 
-    public void Initialize()
-    {
-        if (!_isInitialized)
+        var wrapper = new ActionReportInfoWrapper
         {
-            var wrapper = new ActionReportInfoWrapper
-            {
-                Statistics = _statistics
-            };
+            Statistics = _statistics
+        };
 
-            _actionInfo?.Insert(wrapper);
-
-            _isInitialized = true;
-        }
+        _actionInfo.Insert(wrapper);
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -82,6 +73,6 @@ public class ActionReportFilter : IActionFilter
 
     private async void UpdateStatistics()
     {
-        await _actionInfo!.SaveAsync();
+        await _actionInfo.SaveAsync();
     }
 }
