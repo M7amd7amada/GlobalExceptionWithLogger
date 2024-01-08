@@ -18,13 +18,6 @@ public class ActionReportFilter : IActionFilter
         _statistics = statistics;
         _provider = provider;
         _actionInfo = (RedisCollection<ActionReportInfoWrapper>)_provider.RedisCollection<ActionReportInfoWrapper>();
-
-        var wrapper = new ActionReportInfoWrapper
-        {
-            Statistics = _statistics
-        };
-
-        _actionInfo.Insert(wrapper);
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -41,7 +34,7 @@ public class ActionReportFilter : IActionFilter
         var action = context.RouteData.Values["action"]?.ToString();
 
         IncrementStatusCodeCount(controller!, action!, context.HttpContext.Response.StatusCode);
-        UpdateStatistics();
+        LogToRedis();
     }
 
     private void IncrementCallCount(string controller, string action)
@@ -71,8 +64,13 @@ public class ActionReportFilter : IActionFilter
         _statistics[key].StatusCodesCount![statusCode]++;
     }
 
-    private async void UpdateStatistics()
+    private async void LogToRedis()
     {
-        await _actionInfo.SaveAsync();
+        var wrapper = new ActionReportInfoWrapper
+        {
+            Statistics = _statistics
+        };
+
+        await _actionInfo.InsertAsync(wrapper);
     }
 }

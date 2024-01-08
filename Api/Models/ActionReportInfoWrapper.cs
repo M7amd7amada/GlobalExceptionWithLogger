@@ -6,8 +6,5 @@ namespace Api.Models;
 public class ActionReportInfoWrapper
 {
     [Indexed]
-    public int Id { get; set; }
-
-    [Indexed]
     public Dictionary<string, ActionReportInfo>? Statistics { get; set; }
 }
