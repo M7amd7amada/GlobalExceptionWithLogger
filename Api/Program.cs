@@ -1,3 +1,4 @@
+using Api;
 using Api.Filters;
 using Api.Models;
 using Api.Services;
@@ -7,8 +8,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers(options =>
 {
-    options.Filters.Add(typeof(GlobalExceptionFilter));
-    options.Filters.Add(typeof(GlobalEndpointFilter));
     options.Filters.Add(typeof(ActionReportFilter));
 });
 
@@ -19,6 +18,8 @@ builder.Services.AddSingleton(statistics);
 builder.Services.AddSingleton<ActionReportFilter>();
 
 var app = builder.Build();
+
+app.UseMiddleware<StatusCodeDiagnosticMiddleware>();
 
 app.UseHttpsRedirection();
 app.MapControllers();

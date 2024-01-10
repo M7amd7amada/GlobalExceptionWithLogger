@@ -25,7 +25,7 @@ namespace Api.Controllers
         public IActionResult GetBadRequest()
         {
             // 400 Bad Request
-            return StatusCode(400, new { error = "Bad request, check your input" });
+            return BadRequest("BadRequest");
         }
 
         [HttpGet("unauthorized")]

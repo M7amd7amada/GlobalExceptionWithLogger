@@ -10,11 +10,10 @@ public class ActionReportFilter : IActionFilter
     private readonly Dictionary<string, ActionReportInfo> _statistics;
     private readonly RedisConnectionProvider _provider;
     private readonly RedisCollection<ActionReportInfoWrapper> _actionInfo;
-    private string _key = string.Empty;
 
     public ActionReportFilter(
-        Dictionary<string, ActionReportInfo> statistics,
-        RedisConnectionProvider provider)
+         Dictionary<string, ActionReportInfo> statistics,
+         RedisConnectionProvider provider)
     {
         _statistics = statistics;
         _provider = provider;
@@ -26,15 +25,20 @@ public class ActionReportFilter : IActionFilter
     {
         var controller = context.RouteData.Values["controller"]?.ToString();
 
+        var statusCode = context.HttpContext.Response.StatusCode;
+
         IncrementCallCount(controller!);
     }
 
-    public async void OnActionExecuted(ActionExecutedContext context)
+    public void OnActionExecuted(ActionExecutedContext context)
     {
         var controller = context.RouteData.Values["controller"]?.ToString();
-
-        IncrementStatusCodeCount(controller!, context.HttpContext.Response.StatusCode);
-        await LogToRedis();
+        context.HttpContext.Response.OnCompleted(async () =>
+        {
+            var statusCode = context.HttpContext.Response.StatusCode;
+            IncrementStatusCodeCount(controller!, statusCode);
+            await LogToRedis();
+        });
     }
 
     private void IncrementCallCount(string controller)
