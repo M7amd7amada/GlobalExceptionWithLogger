@@ -9,4 +9,10 @@ public class TestController : ControllerBase
     {
         throw new InvalidOperationException("This is a test exception.");
     }
+
+    [HttpPost("test-post")]
+    public IActionResult TestPost(int num)
+    {
+        throw new InvalidOperationException("This is a test exception with post method.");
+    }
 }

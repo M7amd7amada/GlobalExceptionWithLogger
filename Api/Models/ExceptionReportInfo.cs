@@ -22,8 +22,10 @@ public class ExceptionReportInfo
     [Indexed]
     public string Parameters { get; set; } = default!;
     [Indexed]
-    public int Response { get; set; } = default!;
+    public int Response { get; set; }
 
     [Indexed]
     public DateTime Created { get; set; } = default!;
+    [Indexed]
+    public string Body { get; set; } = default!;
 }
