@@ -54,7 +54,7 @@ public class GlobalExceptionFilter : IExceptionFilter
             ExceptionType = context.Exception.GetType().FullName!,
             ActionName = context.ActionDescriptor.RouteValues["action"]!,
             ControllerName = context.ActionDescriptor.RouteValues["controller"]!,
-            Parameters = JsonConvert.SerializeObject(context.HttpContext.Request.Query),
+            Parameters = GetQueryStringAsString(context.HttpContext.Request),
             Created = DateTime.Now,
             Body = await ReadRequestBody(context.HttpContext.Request)
         };
@@ -66,13 +66,24 @@ public class GlobalExceptionFilter : IExceptionFilter
         return info;
     }
 
-    private async Task<string> ReadRequestBody(HttpRequest request)
+    private static string GetQueryStringAsString(HttpRequest request)
+    {
+        var queryParameters = new StringBuilder();
+
+        var queryString = request.QueryString;
+        foreach (var queryParam in queryString.Value!.Split('&'))
+        {
+            queryParameters.Append(queryParam[1..]).Append(' ');
+        }
+
+        return queryParameters.ToString();
+    }
+
+    private static async Task<string> ReadRequestBody(HttpRequest request)
     {
         // Read the request body asynchronously
-        using (var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true))
-        {
-            return await reader.ReadToEndAsync();
-        }
+        using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
+        return await reader.ReadToEndAsync();
     }
 
     private void LogToDisk(dynamic logDetails)
@@ -94,7 +105,7 @@ public class GlobalExceptionFilter : IExceptionFilter
         await _exceptionInfo.InsertAsync(info);
     }
 
-    private void EnsureLogFileExists(string filePath)
+    private static void EnsureLogFileExists(string filePath)
     {
         if (!Directory.Exists(Path.GetDirectoryName(filePath)))
         {
@@ -106,7 +117,7 @@ public class GlobalExceptionFilter : IExceptionFilter
         }
     }
 
-    private ObjectResult CreateErrorResponse(ExceptionContext context)
+    private static ObjectResult CreateErrorResponse(ExceptionContext context)
     {
         return new ObjectResult(new
         {
