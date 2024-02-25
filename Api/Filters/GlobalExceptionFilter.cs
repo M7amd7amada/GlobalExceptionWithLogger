@@ -1,6 +1,9 @@
+using Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Newtonsoft.Json;
+using Redis.OM;
+using Redis.OM.Searching;
 using System.Text;
 
 namespace Api.Filters;
@@ -9,22 +12,28 @@ public class GlobalExceptionFilter : IExceptionFilter
 {
     private readonly ILogger<GlobalExceptionFilter> _logger;
     private readonly IConfiguration _configuration;
+    private readonly RedisConnectionProvider _provider;
+    private readonly RedisCollection<ExceptionReportInfo> _exceptionInfo;
 
     public GlobalExceptionFilter(
         ILogger<GlobalExceptionFilter> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        RedisConnectionProvider provider)
     {
         _logger = logger;
         _configuration = configuration;
+        _provider = provider;
+        _exceptionInfo = (RedisCollection<ExceptionReportInfo>)
+            _provider.RedisCollection<ExceptionReportInfo>();
     }
 
     public void OnException(ExceptionContext context)
     {
         LogExceptionDetails(context.Exception);
 
-        var logDetails = CreateLogDetails(context);
+        CreateLogDetails(context);
 
-        LogToDisk(logDetails);
+        // LogToDisk(logDetails);
 
         context.Result = CreateErrorResponse(context);
         context.ExceptionHandled = true;
@@ -35,42 +44,51 @@ public class GlobalExceptionFilter : IExceptionFilter
         _logger.LogError(exception, "An unhandled exception has occurred.");
     }
 
-    private object CreateLogDetails(ExceptionContext context)
+    private void CreateLogDetails(ExceptionContext context)
     {
-        return new
+        context.HttpContext.Response.OnCompleted(async () =>
         {
-            ExMessage = context.Exception.Message,
-            InnerExMessage = context.Exception.InnerException?.Message,
-            ExceptionType = context.Exception.GetType().FullName,
-            ActionName = context.ActionDescriptor.RouteValues["action"],
-            ControllerName = context.ActionDescriptor.RouteValues["controller"],
-            Parameters = JsonConvert.SerializeObject(context.HttpContext.Request.Query),
-            Response = context.HttpContext.Response.StatusCode,
-            Created = DateTime.Now
-        };
+            var foo = new ExceptionReportInfo
+            {
+                ExMessage = context.Exception.Message,
+                InnerExMessage = context.Exception.InnerException?.Message!,
+                ExceptionType = context.Exception.GetType().FullName!,
+                ActionName = context.ActionDescriptor.RouteValues["action"]!,
+                ControllerName = context.ActionDescriptor.RouteValues["controller"]!,
+                Parameters = JsonConvert.SerializeObject(context.HttpContext.Request.Query),
+                Response = context.HttpContext.Response.StatusCode,
+                Created = DateTime.Now
+            };
+            await LogToRedis(foo);
+        });
     }
 
-    private void LogToDisk(dynamic logDetails)
+    // private void LogToDisk(dynamic logDetails)
+    // {
+    //     var logDirectory = _configuration["LogsDirName"];
+    //     var fileName = $"log-{DateTime.Today:yyyy-MM-dd}.txt";
+    //     var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), logDirectory!, fileName);
+
+    //     EnsureLogFileExists(logFilePath);
+
+    //     var logMessage = JsonConvert.SerializeObject(logDetails, Formatting.Indented);
+
+    //     using var streamWriter = new StreamWriter(logFilePath, true, Encoding.UTF8);
+    //     streamWriter.WriteLine(logMessage);
+    // }
+
+    private async Task LogToRedis(ExceptionReportInfo info)
     {
-        var logDirectory = _configuration["LogsDirName"];
-        var fileName = $"log-{DateTime.Today:yyyy-MM-dd}.txt";
-        var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), logDirectory!, fileName);
-
-        EnsureLogFileExists(logFilePath);
-
-        var logMessage = JsonConvert.SerializeObject(logDetails, Formatting.Indented);
-
-        using var streamWriter = new StreamWriter(logFilePath, true, Encoding.UTF8);
-        streamWriter.WriteLine(logMessage);
+        await _exceptionInfo.InsertAsync(info);
     }
 
-    private void EnsureLogFileExists(string filePath)
-    {
-        if (!File.Exists(filePath))
-        {
-            using (File.Create(filePath)) { }
-        }
-    }
+    // private void EnsureLogFileExists(string filePath)
+    // {
+    //     if (!File.Exists(filePath))
+    //     {
+    //         using (File.Create(filePath)) { }
+    //     }
+    // }
 
     private ObjectResult CreateErrorResponse(ExceptionContext context)
     {
