@@ -73,7 +73,7 @@ public class GlobalExceptionFilter : IExceptionFilter
         var queryString = request.QueryString;
         foreach (var queryParam in queryString.Value!.Split('&'))
         {
-            queryParameters.Append(queryParam[1..]).Append(' ');
+            queryParameters.Append(queryParam).Append(' ');
         }
 
         return queryParameters.ToString();
