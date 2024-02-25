@@ -81,7 +81,6 @@ public class GlobalExceptionFilter : IExceptionFilter
 
     private static async Task<string> ReadRequestBody(HttpRequest request)
     {
-        // Read the request body asynchronously
         using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
         return await reader.ReadToEndAsync();
     }
